@@ -1,21 +1,26 @@
 const std = @import("std");
+const util = @import("../../util.zig");
+
+const help_msg =
+    \\Generate a layout. Layouts encapsulate common boilerplate mark-up.
+    \\
+    \\Specify a layout name to create a new Zmpl template in src/app/views/layouts/
+    \\
+    \\Example:
+    \\
+    \\  jetzig generate layout standard
+    \\
+;
 
 /// Run the layout generator. Create a layout template in `src/app/views/layouts`
 pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, help: bool) !void {
-    if (help or args.len != 1) {
-        std.debug.print(
-            \\Generate a layout. Layouts encapsulate common boilerplate mark-up.
-            \\
-            \\Specify a layout name to create a new Zmpl template in src/app/views/layouts/
-            \\
-            \\Example:
-            \\
-            \\  jetzig generate layout standard
-            \\
-        , .{});
+    if (help) {
+        try util.stdout.print(help_msg, .{});
+        return;
+    }
 
-        if (help) return;
-
+    if (args.len != 1) {
+        try util.stderr.print(help_msg, .{});
         return error.JetzigCommandError;
     }
 
@@ -34,7 +39,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     const file = dir.createFile(filename, .{ .exclusive = true }) catch |err| {
         switch (err) {
             error.PathAlreadyExists => {
-                std.debug.print("Layout already exists: {s}\n", .{filename});
+                try util.stderr.print("Layout already exists: {s}\n", .{filename});
                 return error.JetzigCommandError;
             },
             else => return err,
@@ -55,5 +60,5 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
 
     const realpath = try dir.realpathAlloc(allocator, filename);
     defer allocator.free(realpath);
-    std.debug.print("Generated layout: {s}\n", .{realpath});
+    try util.stdout.print("Generated layout: {s}\n", .{realpath});
 }

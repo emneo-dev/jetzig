@@ -38,21 +38,20 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
     if (builtin.os.tag == .windows) {
-        std.debug.print("Bundling on Windows is currently not supported.\n", .{});
+        try util.stderr.print("Bundling on Windows is currently not supported.\n", .{});
         std.process.exit(1);
     }
 
     if (main_options.options.help) {
-        try args.printHelp(Options, "jetzig bundle", writer);
+        try args.printHelp(Options, "jetzig bundle", util.stdout);
         return;
     }
 
-    std.debug.print("Compiling bundle...\n", .{});
+    try util.stdout.print("Compiling bundle...\n", .{});
     var cwd = try util.detectJetzigProjectDir();
     defer cwd.close();
 
@@ -70,8 +69,8 @@ pub fn run(
 
     const maybe_executable = try zig_build_install(allocator, path, options);
     if (maybe_executable == null) {
-        std.debug.print("Unable to locate compiled executable in {s}", .{path});
-        util.printFailure();
+        try util.stderr.print("Unable to locate compiled executable in {s}", .{path});
+        try util.printFailure();
         std.process.exit(1);
     }
 
@@ -110,7 +109,7 @@ pub fn run(
     var tar_argv: ArrayList([]const u8) = .empty;
     defer tar_argv.deinit(allocator);
     switch (builtin.os.tag) {
-        .windows => {}, // TODO
+        .windows => unreachable, // TODO
         else => {
             try tar_argv.appendSlice(allocator, &[_][]const u8{
                 "tar",
@@ -154,10 +153,10 @@ pub fn run(
     try util.runCommandInDir(allocator, tar_argv.items, .{ .path = tmpdir_real_path }, .{});
 
     switch (builtin.os.tag) {
-        .windows => {},
-        else => std.debug.print("Bundle `bundle.tar.gz` generated successfully.", .{}),
+        .windows => unreachable,
+        else => try util.stdout.print("Bundle `bundle.tar.gz` generated successfully.", .{}),
     }
-    util.printSuccess(null);
+    try util.printSuccess(null);
 }
 
 fn locateMarkdownFiles(allocator: std.mem.Allocator, dir: std.fs.Dir, views_path: []const u8, paths: *ArrayList([]const u8)) !void {

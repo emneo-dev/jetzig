@@ -3,6 +3,16 @@ const std = @import("std");
 const cli = @import("../../cli.zig");
 const util = @import("../../util.zig");
 
+const help_msg =
+    \\Roll back a database migration.
+    \\
+    \\Example:
+    \\
+    \\  jetzig database rollback
+    \\  jetzig --environment=testing database rollback
+    \\
+;
+
 pub fn run(
     allocator: std.mem.Allocator,
     cwd: std.fs.Dir,
@@ -13,18 +23,14 @@ pub fn run(
 ) !void {
     _ = cwd;
     _ = options;
-    if (main_options.options.help or args.len != 0) {
-        std.debug.print(
-            \\Roll back a database migration.
-            \\
-            \\Example:
-            \\
-            \\  jetzig database rollback
-            \\  jetzig --environment=testing database rollback
-            \\
-        , .{});
+    if (main_options.options.help) {
+        try util.stdout.print(help_msg, .{});
+        return;
+    }
 
-        return if (main_options.options.help) {} else error.JetzigCommandError;
+    if (args.len != 0) {
+        try util.stderr.print(help_msg, .{});
+        return error.JetzigCommandError;
     }
 
     try util.execCommand(allocator, &.{

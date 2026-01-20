@@ -25,9 +25,11 @@ pub fn build(b: *std.Build) !void {
 
     const exe = b.addExecutable(.{
         .name = "jetzig",
-        .root_source_file = b.path("cli.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("cli.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const zig_args_dep = b.dependency("args", .{ .target = target, .optimize = optimize });

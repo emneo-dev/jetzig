@@ -1,23 +1,28 @@
 const std = @import("std");
+const util = @import("../../util.zig");
 
 const jetquery = @import("jetquery");
 
+const help_msg =
+    \\Generate a new Seeder. Seeders is a way to set up some inital data for your application.
+    \\
+    \\Example:
+    \\
+    \\  jetzig generate seeder iguana
+    \\
+    \\  More information: https://www.jetzig.dev/documentation/sections/database/command_line_tools
+    \\
+;
+
 /// Run the seeder generator. Create a seed in `src/app/database/seeders/`
 pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, help: bool) !void {
-    if (help or args.len < 1) {
-        std.debug.print(
-            \\Generate a new Seeder. Seeders is a way to set up some inital data for your application.
-            \\
-            \\Example:
-            \\
-            \\  jetzig generate seeder iguana
-            \\
-            \\  More information: https://www.jetzig.dev/documentation/sections/database/command_line_tools
-            \\
-        , .{});
+    if (help) {
+        try util.stdout.print(help_msg, .{});
+        return;
+    }
 
-        if (help) return;
-
+    if (args.len < 1) {
+        try util.stderr.print(help_msg, .{});
         return error.JetzigCommandError;
     }
 
@@ -36,5 +41,5 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     );
     const path = try seed.save();
 
-    std.log.info("Saved seed: {s}", .{path});
+    try util.stdout.print("Saved seed: {s}", .{path});
 }

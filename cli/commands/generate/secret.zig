@@ -1,9 +1,10 @@
 const std = @import("std");
+const util = @import("../../util.zig");
 
 /// Generate a secure random secret and output to stdout.
 pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, help: bool) !void {
     if (help) {
-        std.debug.print(
+        try util.stdout.print(
             \\Generate a secure random secret suitable for use as the `JETZIG_SECRET` environment variable.
             \\
         , .{});
@@ -21,5 +22,5 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
         secret[index] = chars[std.crypto.random.intRangeAtMost(u8, 0, chars.len - 1)];
     }
 
-    try std.io.getStdOut().writer().print("{s}\n", .{secret});
+    try util.stdout.print("{s}\n", .{secret});
 }

@@ -1,6 +1,7 @@
 const std = @import("std");
 const args = @import("args");
 const version = @import("version");
+const util = @import("../util.zig");
 
 /// Command line options for the `version` command.
 pub const Options = struct {
@@ -14,13 +15,12 @@ pub const Options = struct {
 pub fn run(
     _: std.mem.Allocator,
     _: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
     if (main_options.options.help) {
-        try args.printHelp(Options, "jetzig version", writer);
+        try args.printHelp(Options, "jetzig version", util.stdout);
         return;
     }
-    std.debug.print("{s}+{s}\n", .{ version.version, version.commit_hash });
+    try util.stdout.print("{s}+{s}\n", .{ version.version, version.commit_hash });
 }

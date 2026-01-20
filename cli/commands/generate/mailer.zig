@@ -1,19 +1,24 @@
 const std = @import("std");
+const util = @import("../../util.zig");
+
+const help_msg =
+    \\Generate a new Mailer. Mailers provide an interface for sending emails from a Jetzig application.
+    \\
+    \\Example:
+    \\
+    \\  jetzig generate mailer iguana
+    \\
+;
 
 /// Run the mailer generator. Create a mailer in `src/app/mailers/`
 pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, help: bool) !void {
-    if (help or args.len != 1) {
-        std.debug.print(
-            \\Generate a new Mailer. Mailers provide an interface for sending emails from a Jetzig application.
-            \\
-            \\Example:
-            \\
-            \\  jetzig generate mailer iguana
-            \\
-        , .{});
+    if (help) {
+        try util.stdout.print(help_msg, .{});
+        return;
+    }
 
-        if (help) return;
-
+    if (args.len != 1) {
+        try util.stderr.print(help_msg, .{});
         return error.JetzigCommandError;
     }
 
@@ -31,7 +36,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     const mailer_file = dir.createFile(filename, .{ .exclusive = true }) catch |err| {
         switch (err) {
             error.PathAlreadyExists => {
-                std.debug.print("Mailer already exists: {s}\n", .{filename});
+                try util.stderr.print("Mailer already exists: {s}\n", .{filename});
                 return error.JetzigCommandError;
             },
             else => return err,
@@ -77,7 +82,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     const realpath = try dir.realpathAlloc(allocator, filename);
     defer allocator.free(realpath);
 
-    std.debug.print("Generated mailer: {s}\n", .{realpath});
+    try util.stdout.print("Generated mailer: {s}\n", .{realpath});
 
     const template_dir_path = try std.fs.path.join(allocator, &[_][]const u8{ "src", "app", "mailers", name });
     defer allocator.free(template_dir_path);
@@ -91,7 +96,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     ) catch |err| blk: {
         switch (err) {
             error.PathAlreadyExists => {
-                std.debug.print("Template already exists: `{s}/html.zmpl` - skipping.\n", .{template_dir_path});
+                try util.stderr.print("Template already exists: `{s}/html.zmpl` - skipping.\n", .{template_dir_path});
                 break :blk null;
             },
             else => return err,
@@ -104,7 +109,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     ) catch |err| blk: {
         switch (err) {
             error.PathAlreadyExists => {
-                std.debug.print("Template already exists: `{s}/text.zmpl` - skipping.\n", .{template_dir_path});
+                try util.stderr.print("Template already exists: `{s}/text.zmpl` - skipping.\n", .{template_dir_path});
                 break :blk null;
             },
             else => return err,
@@ -119,7 +124,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
         file.close();
         const html_template_realpath = try template_dir.realpathAlloc(allocator, "html.zmpl");
         defer allocator.free(html_template_realpath);
-        std.debug.print("Generated mailer template: {s}\n", .{html_template_realpath});
+        try util.stdout.print("Generated mailer template: {s}\n", .{html_template_realpath});
     }
 
     if (text_template_file) |file| {
@@ -130,6 +135,6 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
         file.close();
         const text_template_realpath = try template_dir.realpathAlloc(allocator, "text.zmpl");
         defer allocator.free(text_template_realpath);
-        std.debug.print("Generated mailer template: {s}\n", .{text_template_realpath});
+        try util.stdout.print("Generated mailer template: {s}\n", .{text_template_realpath});
     }
 }

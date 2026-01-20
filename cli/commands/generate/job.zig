@@ -1,21 +1,26 @@
 const std = @import("std");
+const util = @import("../../util.zig");
+
+const help_msg =
+    \\Generate a new Job. Jobs can be scheduled to run in the background.
+    \\Use a Job when you need to return a request immediately and perform
+    \\another task asynchronously.
+    \\
+    \\Example:
+    \\
+    \\  jetzig generate job iguana
+    \\
+;
 
 /// Run the job generator. Create a job in `src/app/jobs/`
 pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, help: bool) !void {
-    if (help or args.len != 1) {
-        std.debug.print(
-            \\Generate a new Job. Jobs can be scheduled to run in the background.
-            \\Use a Job when you need to return a request immediately and perform
-            \\another task asynchronously.
-            \\
-            \\Example:
-            \\
-            \\  jetzig generate job iguana
-            \\
-        , .{});
+    if (help) {
+        try util.stdout.print(help_msg, .{});
+        return;
+    }
 
-        if (help) return;
-
+    if (args.len != 1) {
+        try util.stderr.print(help_msg, .{});
         return error.JetzigCommandError;
     }
 
@@ -31,7 +36,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     const file = dir.createFile(filename, .{ .exclusive = true }) catch |err| {
         switch (err) {
             error.PathAlreadyExists => {
-                std.debug.print("Job already exists: {s}\n", .{filename});
+                try util.stderr.print("Job already exists: {s}\n", .{filename});
                 return error.JetzigCommandError;
             },
             else => return err,
@@ -64,5 +69,5 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
 
     const realpath = try dir.realpathAlloc(allocator, filename);
     defer allocator.free(realpath);
-    std.debug.print("Generated job: {s}\n", .{realpath});
+    try util.stdout.print("Generated job: {s}\n", .{realpath});
 }

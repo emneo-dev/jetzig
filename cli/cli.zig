@@ -15,6 +15,8 @@ pub const completion = @import("commands/completion.zig");
 
 pub const Environment = enum { development, testing, production };
 
+const util = @import("util.zig");
+
 pub const Options = struct {
     help: bool = false,
     environment: Environment = .development,
@@ -62,9 +64,32 @@ const Verb = union(enum) {
     d: database.Options,
 };
 
+fn printHelp(writer: *std.Io.Writer) !void {
+    try args.printHelp(Options, "jetzig", writer);
+    try writer.writeAll(
+        \\
+        \\Commands:
+        \\
+        \\  init         Initialize a new project.
+        \\  update       Update current project to latest version of Jetzig.
+        \\  generate     Generate scaffolding.
+        \\  server       Run a development server.
+        \\  routes       List all routes in your app.
+        \\  bundle       Create a deployment bundle.
+        \\  database     Manage the application's database.
+        \\  auth         Utilities for Jetzig authentication.
+        \\  test         Run app tests.
+        \\  completion   Provide shell-completion.
+        \\  version      Print Jetzig version.
+        \\
+        \\ Pass --help to any command for more information, e.g. `jetzig init --help`
+        \\
+    );
+}
+
 /// Main entrypoint for `jetzig` executable. Parses command line args and generates a new
 /// project, scaffolding, etc.
-pub fn main() !void {
+pub fn main() !u8 {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer std.debug.assert(gpa.deinit() == .ok);
@@ -72,41 +97,27 @@ pub fn main() !void {
     const options = try args.parseWithVerbForCurrentProcess(Options, Verb, allocator, .print);
     defer options.deinit();
 
-    const writer = std.io.getStdErr().writer();
-    const stdout_writer = std.io.getStdOut().writer();
+    var stderr_writer = std.fs.File.stderr().writer(&.{});
+    var stdout_writer = std.fs.File.stdout().writer(&.{});
+    util.stdout = &stdout_writer.interface;
+    util.stderr = &stderr_writer.interface;
 
-    run(allocator, options, stdout_writer, writer) catch |err| {
+    run(allocator, options) catch |err| {
         switch (err) {
-            error.JetzigCommandError => std.process.exit(1),
+            error.JetzigCommandError => return 1,
             else => return err,
         }
     };
 
-    if ((!options.options.help and options.verb == null) or (options.options.help and options.verb == null)) {
-        try args.printHelp(Options, "jetzig", writer);
-        try writer.writeAll(
-            \\
-            \\Commands:
-            \\
-            \\  init         Initialize a new project.
-            \\  update       Update current project to latest version of Jetzig.
-            \\  generate     Generate scaffolding.
-            \\  server       Run a development server.
-            \\  routes       List all routes in your app.
-            \\  bundle       Create a deployment bundle.
-            \\  database     Manage the application's database.
-            \\  auth         Utilities for Jetzig authentication.
-            \\  test         Run app tests.
-            \\  completion   Provide shell-completion.
-            \\  version      Print Jetzig version.
-            \\
-            \\ Pass --help to any command for more information, e.g. `jetzig init --help`
-            \\
-        );
+    if (options.options.help and options.verb == null) {
+        try printHelp(util.stdout);
+    } else if (!options.options.help and options.verb == null) {
+        try printHelp(util.stderr);
     }
+    return 0;
 }
 
-fn run(allocator: std.mem.Allocator, options: args.ParseArgsResult(Options, Verb), stdout_writer: anytype, writer: anytype) !void {
+fn run(allocator: std.mem.Allocator, options: args.ParseArgsResult(Options, Verb)) !void {
     const OptionsType = args.ParseArgsResult(Options, Verb);
 
     if (options.verb) |verb| {
@@ -114,78 +125,66 @@ fn run(allocator: std.mem.Allocator, options: args.ParseArgsResult(Options, Verb
             .init => |opts| init.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .g, .generate => |opts| generate.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .update => |opts| update.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .version => |opts| version.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .s, .server => |opts| server.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .r, .routes => |opts| routes.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .b, .bundle => |opts| bundle.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .t, .@"test" => |opts| tests.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .d, .database => |opts| database.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .auth => |opts| auth.run(
                 allocator,
                 opts,
-                writer,
                 OptionsType,
                 options,
             ),
             .completion => |opts| completion.run(
                 allocator,
                 opts,
-                stdout_writer,
-                writer,
                 OptionsType,
                 options,
             ),

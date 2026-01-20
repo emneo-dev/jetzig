@@ -1,20 +1,24 @@
 const std = @import("std");
 const util = @import("../../util.zig");
 
+const help_msg =
+    \\Generate a middleware module. Module name must be in CamelCase.
+    \\
+    \\Example:
+    \\
+    \\  jetzig generate middleware IguanaBrain
+    \\
+;
+
 /// Run the middleware generator. Create a middleware file in `src/app/middleware/`
 pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, help: bool) !void {
-    if (help or args.len != 1 or !util.isCamelCase(args[0])) {
-        std.debug.print(
-            \\Generate a middleware module. Module name must be in CamelCase.
-            \\
-            \\Example:
-            \\
-            \\  jetzig generate middleware IguanaBrain
-            \\
-        , .{});
+    if (help) {
+        try util.stdout.print(help_msg, .{});
+        return;
+    }
 
-        if (help) return;
-
+    if (args.len != 1 or !util.isCamelCase(args[0])) {
+        try util.stderr.print(help_msg, .{});
         return error.JetzigCommandError;
     }
 
@@ -30,7 +34,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     const file = dir.createFile(filename, .{ .exclusive = true }) catch |err| {
         switch (err) {
             error.PathAlreadyExists => {
-                std.debug.print("Middleware already exists: {s}\n", .{filename});
+                try util.stderr.print("Middleware already exists: {s}\n", .{filename});
                 return error.JetzigCommandError;
             },
             else => return err,
@@ -43,7 +47,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
 
     const realpath = try dir.realpathAlloc(allocator, filename);
     defer allocator.free(realpath);
-    std.debug.print(
+    try util.stdout.print(
         \\Generated middleware: {s}
         \\
         \\Edit `src/main.zig` and add the new middleware to the `jetzig_options.middleware` declaration:

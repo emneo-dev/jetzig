@@ -1,19 +1,24 @@
 const std = @import("std");
+const util = @import("../../util.zig");
+
+const help_msg =
+    \\Generate a partial template. Expects a view name followed by a partial name.
+    \\
+    \\Example:
+    \\
+    \\  jetzig generate partial iguanas ziglet
+    \\
+;
 
 /// Run the partial generator. Create a partial template in `src/app/views/`
 pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, help: bool) !void {
-    if (help or args.len != 2) {
-        std.debug.print(
-            \\Generate a partial template. Expects a view name followed by a partial name.
-            \\
-            \\Example:
-            \\
-            \\  jetzig generate partial iguanas ziglet
-            \\
-        , .{});
+    if (help) {
+        try util.stdout.print(help_msg, .{});
+        return;
+    }
 
-        if (help) return;
-
+    if (args.len != 2) {
+        try util.stderr.print(help_msg, .{});
         return error.JetzigCommandError;
     }
 
@@ -29,7 +34,7 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     const file = dir.createFile(filename, .{ .exclusive = true }) catch |err| {
         switch (err) {
             error.PathAlreadyExists => {
-                std.debug.print("Partial already exists: {s}\n", .{filename});
+                try util.stderr.print("Partial already exists: {s}\n", .{filename});
                 return error.JetzigCommandError;
             },
             else => return err,
@@ -45,5 +50,5 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
 
     const realpath = try dir.realpathAlloc(allocator, filename);
     defer allocator.free(realpath);
-    std.debug.print("Generated partial template: {s}\n", .{realpath});
+    try util.stdout.print("Generated partial template: {s}\n", .{realpath});
 }

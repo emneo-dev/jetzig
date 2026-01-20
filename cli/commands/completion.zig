@@ -1,5 +1,6 @@
 const std = @import("std");
 const args = @import("args");
+const util = @import("../util.zig");
 const fish = struct {};
 
 const ArrayList = std.ArrayList;
@@ -22,8 +23,6 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    stdout_writer: anytype,
-    stderr_writer: anytype,
     T: type,
     main_options: T,
 ) !void {
@@ -56,16 +55,16 @@ pub fn run(
     }
 
     if (main_options.options.help and generate_type == null) {
-        try args.printHelp(Options, "jetzig generate", stderr_writer);
+        try args.printHelp(Options, "jetzig generate", util.stdout);
         return;
     } else if (generate_type == null) {
-        std.debug.print("Missing sub-command. Expected: [{s}]\n", .{available_help});
+        try util.stderr.print("Missing sub-command. Expected: [{s}]\n", .{available_help});
         return error.JetzigCommandError;
     }
 
     if (generate_type) |capture| {
         return switch (capture) {
-            .fish => stdout_writer.print(
+            .fish => try util.stdout.print(
                 \\complete -c jetzig -e ## clear previous jetzig completion
                 \\{s}
                 \\

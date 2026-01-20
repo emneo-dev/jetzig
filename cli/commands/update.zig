@@ -29,18 +29,17 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
     _ = options;
     if (main_options.options.help) {
-        try args.printHelp(Options, "jetzig update", writer);
+        try args.printHelp(Options, "jetzig update", util.stdout);
         return;
     }
 
     if (main_options.positionals.len > 1) {
-        std.debug.print(
+        try util.stderr.print(
             "Expected at most 1 positional argument, found {}\n",
             .{main_options.positionals.len},
         );
@@ -65,7 +64,7 @@ pub fn run(
         },
     );
 
-    std.debug.print(
+    try util.stdout.print(
         \\Update complete.
         \\
     , .{});

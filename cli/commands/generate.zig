@@ -33,7 +33,6 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
@@ -89,10 +88,10 @@ pub fn run(
     }
 
     if (main_options.options.help and generate_type == null) {
-        try args.printHelp(Options, "jetzig generate", writer);
+        try args.printHelp(Options, "jetzig generate", util.stdout);
         return;
     } else if (generate_type == null) {
-        std.debug.print("Missing sub-command. Expected: [{s}]\n", .{available_help});
+        try util.stderr.print("Missing sub-command. Expected: [{s}]\n", .{available_help});
         return error.JetzigCommandError;
     }
 

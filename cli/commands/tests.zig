@@ -27,12 +27,10 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
     _ = options;
-    _ = writer;
     _ = main_options;
     try util.execCommand(allocator, &.{
         "zig",

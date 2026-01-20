@@ -34,7 +34,6 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
@@ -73,11 +72,11 @@ pub fn run(
         &.{};
 
     return if (main_options.options.help and action == null) blk: {
-        try args.printHelp(Options, "jetzig database", writer);
+        try args.printHelp(Options, "jetzig database", util.stdout);
         break :blk {};
     } else if (action == null) blk: {
         const available_help = try std.mem.join(alloc, "|", map.keys());
-        std.debug.print("Missing sub-command. Expected: [{s}]\n", .{available_help});
+        try util.stderr.print("Missing sub-command. Expected: [{s}]\n", .{available_help});
         break :blk error.JetzigCommandError;
     } else if (action) |capture| blk: {
         var cwd = try util.detectJetzigProjectDir();

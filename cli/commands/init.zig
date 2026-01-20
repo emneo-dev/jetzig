@@ -33,7 +33,6 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
@@ -42,7 +41,7 @@ pub fn run(
 
     for (main_options.positionals) |arg| {
         if (install_path != null) {
-            std.debug.print("Unexpected positional argument: {s}\n", .{arg});
+            try util.stderr.print("Unexpected positional argument: {s}\n", .{arg});
             return error.JetzigCommandError;
         }
         install_path = arg;
@@ -52,7 +51,7 @@ pub fn run(
     defer allocator.free(github_url);
 
     if (main_options.options.help) {
-        try args.printHelp(Options, "jetzig init", writer);
+        try args.printHelp(Options, "jetzig init", util.stdout);
         return;
     }
 
@@ -91,9 +90,7 @@ pub fn run(
     const realpath = try install_dir.realpathAlloc(allocator, ".");
     defer allocator.free(realpath);
 
-    const output = try std.fmt.allocPrint(allocator, "Creating new project in {s}\n\n", .{realpath});
-    defer allocator.free(output);
-    try writer.writeAll(output);
+    try util.stdout.print("Creating new project in {s}\n\n", .{realpath});
 
     try copySourceFile(
         allocator,
@@ -251,12 +248,12 @@ fn copySourceFile(
     dest: []const u8,
     replace: ?[]const Replace,
 ) !void {
-    std.debug.print("[create] {s}", .{dest});
+    try util.stdout.print("[create] {s}", .{dest});
 
     var content: []const u8 = undefined;
     if (replace) |capture| {
         const initial = readSourceFile(allocator, src) catch |err| {
-            util.printFailure();
+            try util.printFailure();
             return err;
         };
         defer allocator.free(initial);
@@ -265,17 +262,17 @@ fn copySourceFile(
         }
     } else {
         content = readSourceFile(allocator, src) catch |err| {
-            util.printFailure();
+            try util.printFailure();
             return err;
         };
     }
     defer allocator.free(content);
 
     writeSourceFile(install_dir, dest, content) catch |err| {
-        util.printFailure();
+        try util.printFailure();
         return err;
     };
-    util.printSuccess(null);
+    try util.printSuccess(null);
 }
 
 // Read a file from Jetzig source code.
@@ -311,25 +308,28 @@ fn promptInput(
     prompt: []const u8,
     options: struct { default: ?[]const u8 },
 ) ![]const u8 {
-    const stdin = std.io.getStdIn();
-    const reader = stdin.reader();
+    var stdin_buffer: [128]u8 = undefined;
+    const stdin = std.fs.File.stdin();
+    var stdin_reader = stdin.reader(&stdin_buffer);
+    var reader = &stdin_reader.interface;
 
-    const max_read_bytes = 1024;
+    var input: std.Io.Writer.Allocating = .init(allocator);
+    defer input.deinit();
 
     while (true) {
         if (options.default) |default| {
-            std.debug.print(
+            try util.stdout.print(
                 \\{s} [default: "{s}"]: 
             , .{ prompt, default });
         } else {
-            std.debug.print(
+            try util.stdout.print(
                 \\{s}: 
             , .{prompt});
         }
-        const input = try reader.readUntilDelimiterOrEofAlloc(allocator, '\n', max_read_bytes);
-        if (input) |capture| {
-            defer allocator.free(capture);
-            const stripped_input = util.strip(capture);
+        const num_bytes_read = try reader.streamDelimiterEnding(&input.writer, '\n');
+        if (num_bytes_read != 0) {
+            defer input.writer.flush() catch unreachable;
+            const stripped_input = util.strip(input.written());
 
             if (std.mem.eql(u8, stripped_input, "")) {
                 if (options.default) |default| return try allocator.dupe(u8, util.strip(default));

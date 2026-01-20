@@ -1,24 +1,29 @@
 const std = @import("std");
+const util = @import("../../util.zig");
 
 const jetquery = @import("jetquery");
 
+const help_msg =
+    \\Generate a new Migration. Migrations modify the application's database schema.
+    \\
+    \\Example:
+    \\
+    \\  jetzig generate migration create_iguanas
+    \\  jetzig generate migration create_iguanas table:create:iguanas column:name:string:index column:age:integer
+    \\
+    \\  More information: https://www.jetzig.dev/documentation/sections/database/command_line_tools
+    \\
+;
+
 /// Run the migration generator. Create a migration in `src/app/database/migrations/`
 pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, help: bool) !void {
-    if (help or args.len < 1) {
-        std.debug.print(
-            \\Generate a new Migration. Migrations modify the application's database schema.
-            \\
-            \\Example:
-            \\
-            \\  jetzig generate migration create_iguanas
-            \\  jetzig generate migration create_iguanas table:create:iguanas column:name:string:index column:age:integer
-            \\
-            \\  More information: https://www.jetzig.dev/documentation/sections/database/command_line_tools
-            \\
-        , .{});
+    if (help) {
+        try util.stdout.print(help_msg, .{});
+        return;
+    }
 
-        if (help) return;
-
+    if (args.len < 1) {
+        try util.stderr.print(help_msg, .{});
         return error.JetzigCommandError;
     }
 
@@ -43,12 +48,12 @@ pub fn run(allocator: std.mem.Allocator, cwd: std.fs.Dir, args: [][]const u8, he
     const path = migration.save() catch |err| {
         switch (err) {
             error.InvalidMigrationCommand => {
-                std.log.err("Invalid migration command: {?s}", .{command});
+                try util.stderr.print("Invalid migration command: {?s}", .{command});
                 return;
             },
             else => return err,
         }
     };
 
-    std.log.info("Saved migration: {s}", .{path});
+    try util.stdout.print("Saved migration: {s}", .{path});
 }

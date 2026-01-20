@@ -20,13 +20,12 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
     _ = options;
     if (main_options.options.help) {
-        try args.printHelp(Options, "jetzig routes", writer);
+        try args.printHelp(Options, "jetzig routes", util.stdout);
         return;
     }
 

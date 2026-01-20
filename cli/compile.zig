@@ -68,6 +68,6 @@ pub fn initDataModule(build: *std.Build) !*std.Build.Module {
     );
 
     const write_files = build.addWriteFiles();
-    const init_data_source = write_files.add("init_data.zig", buf.items());
+    const init_data_source = write_files.add("init_data.zig", buf.written());
     return build.createModule(.{ .root_source_file = init_data_source });
 }

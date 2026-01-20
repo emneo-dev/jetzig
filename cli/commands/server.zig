@@ -33,17 +33,16 @@ pub const Options = struct {
 pub fn run(
     allocator: std.mem.Allocator,
     options: Options,
-    writer: anytype,
     T: type,
     main_options: T,
 ) !void {
     if (main_options.options.help) {
-        try args.printHelp(Options, "jetzig server", writer);
+        try args.printHelp(Options, "jetzig server", util.stdout);
         return;
     }
 
     if (main_options.positionals.len > 0) {
-        std.debug.print("The `server` command does not accept positional arguments.", .{});
+        try util.stderr.print("The `server` command does not accept positional arguments.", .{});
         return error.JetzigCommandError;
     }
 
@@ -55,7 +54,7 @@ pub fn run(
 
     var mtime = try totalMtime(allocator, cwd, "src");
 
-    std.debug.print(
+    try util.stdout.print(
         "Launching development server. [reload:{s}]\n",
         .{
             if (options.reload) "enabled" else "disabled",
@@ -81,15 +80,15 @@ pub fn run(
 
     while (true) {
         util.runCommandInDir(allocator, argv.items, .{ .path = realpath }, .{}) catch {
-            std.debug.print("Build failed, waiting for file change...\n", .{});
+            try util.stderr.print("Build failed, waiting for file change...\n", .{});
             try awaitFileChange(allocator, cwd, &mtime);
-            std.debug.print("Changes detected, restarting server...\n", .{});
+            try util.stdout.print("Changes detected, restarting server...\n", .{});
             continue;
         };
 
         const exe_path = try util.locateExecutable(allocator, cwd, .{});
         if (exe_path == null) {
-            std.debug.print("Unable to locate compiled executable. Exiting.\n", .{});
+            try util.stderr.print("Unable to locate compiled executable. Exiting.\n", .{});
             std.process.exit(1);
         }
 
@@ -118,14 +117,14 @@ pub fn run(
         // could be implemented in the future.
 
         try awaitFileChange(allocator, cwd, &mtime);
-        std.debug.print("Changes detected, restarting server...\n", .{});
+        try util.stdout.print("Changes detected, restarting server...\n", .{});
         _ = try process.kill();
     }
 }
 
 fn awaitFileChange(allocator: std.mem.Allocator, cwd: std.fs.Dir, mtime: *i128) !void {
     while (true) {
-        std.time.sleep(watch_changes_pause_duration);
+        std.Thread.sleep(watch_changes_pause_duration);
         const new_mtime = try totalMtime(allocator, cwd, "src");
         if (new_mtime > mtime.*) {
             mtime.* = new_mtime;
